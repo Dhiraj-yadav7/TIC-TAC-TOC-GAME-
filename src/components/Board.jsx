@@ -2,7 +2,7 @@ import Cell from "./Cell";
 
 export default function Board({ board, onCellClick, winningLine = [], isGameOver }) {
   return (
-    <div className="grid grid-cols-3 gap-3 sm:gap-4 w-full max-w-[320px] sm:max-w-[400px] md:max-w-[440px] aspect-square p-2 sm:p-4 bg-teal-800/20 backdrop-blur-sm rounded-3xl shadow-inner">
+    <div className="grid grid-cols-3 gap-3 sm:gap-4 w-full max-w-[340px] sm:max-w-[420px] md:max-w-[460px] aspect-square p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md rounded-3xl border border-slate-700/60 shadow-2xl">
       {board.map((value, index) => (
         <Cell
           key={index}
@@ -15,4 +15,5 @@ export default function Board({ board, onCellClick, winningLine = [], isGameOver
     </div>
   );
 }
+
 
