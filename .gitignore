@@ -18,6 +18,8 @@ dist/
 dist-ssr/
 
 # Local env files
+.env
+*.env
 *.local
 
 # IDE / Editor files
