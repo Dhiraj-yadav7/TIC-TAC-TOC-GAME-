@@ -2,21 +2,31 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import gameRoutes from './routes/gameRoutes.js';
 
-// Load environment variables from .env file
+// Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tictactoe';
 
-// Configure CORS middleware
+// Middleware
 app.use(cors());
-
-// Configure JSON middleware
 app.use(express.json());
 
-// Connect to MongoDB using Mongoose
+// Routes
+app.use('/api', gameRoutes);
+
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Server is running'
+  });
+});
+
+// Connect to MongoDB
 const connectDB = async () => {
   try {
     await mongoose.connect(MONGODB_URI, {
@@ -29,14 +39,6 @@ const connectDB = async () => {
 };
 
 connectDB();
-
-// GET /api/health route
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running'
-  });
-});
 
 // Start Express server
 app.listen(PORT, () => {
