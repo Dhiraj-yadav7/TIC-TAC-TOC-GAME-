@@ -24,6 +24,24 @@ app.use(
 // Express JSON Body Parser
 app.use(express.json());
 
+// Welcome root endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Tic Tac Toe Backend API is running!',
+    frontendUrl: 'http://localhost:5173',
+    healthCheck: '/api/health',
+    endpoints: [
+      'POST /api/games',
+      'GET /api/games/:id',
+      'PUT /api/games/:id/move',
+      'POST /api/games/:id/reset',
+      'GET /api/games/history',
+      'GET /api/games/stats'
+    ]
+  });
+});
+
 // Mount API Routes
 app.use('/api', gameRoutes);
 
