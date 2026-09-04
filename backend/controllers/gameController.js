@@ -219,3 +219,55 @@ export const resetGame = async (req, res) => {
     });
   }
 };
+
+// 5. Get recent game history - GET /api/games/history
+export const getGameHistory = async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 10, 50);
+
+    const history = await Game.find({
+      status: { $in: ['won', 'draw'] }
+    })
+      .select('playerX playerO winner status createdAt')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: history
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch game history',
+      error: error.message
+    });
+  }
+};
+
+// 6. Get aggregate game statistics - GET /api/games/stats
+export const getGameStats = async (req, res) => {
+  try {
+    const [xWins, oWins, draws] = await Promise.all([
+      Game.countDocuments({ status: 'won', winner: 'X' }),
+      Game.countDocuments({ status: 'won', winner: 'O' }),
+      Game.countDocuments({ status: 'draw' })
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        xWins,
+        oWins,
+        draws
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch game statistics',
+      error: error.message
+    });
+  }
+};

@@ -1,4 +1,4 @@
-export default function Cell({ value, onClick, isWinningCell, isDisabled, isGameOver, isXNext }) {
+export default function Cell({ index, value, onClick, isWinningCell, isDisabled, isGameOver, isXNext }) {
   let cellStyle = "bg-[#FAF7F2] border-[#E6DFD3] shadow-sm";
 
   if (isWinningCell) {
@@ -15,13 +15,27 @@ export default function Cell({ value, onClick, isWinningCell, isDisabled, isGame
       "bg-[#FAF7F2] border-[#E6DFD3] hover:bg-[#FFFFFF] hover:border-teal-500/60 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 cursor-pointer group";
   }
 
+  const handleKeyDown = (e) => {
+    if ((e.key === "Enter" || e.key === " ") && !isDisabled) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  const cellPositionLabel = index !== undefined ? `Cell ${index + 1}` : "Cell";
+  const ariaLabel = value
+    ? `${cellPositionLabel}: occupied by ${value}`
+    : `${cellPositionLabel}: empty${isXNext ? ", Player X turn" : ", Player O turn"}`;
+
   return (
     <button
       type="button"
+      role="gridcell"
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       disabled={isDisabled}
-      className={`w-full aspect-square rounded-2xl border transition-all duration-300 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-teal-500/30 ${cellStyle}`}
-      aria-label={value ? `Cell with ${value}` : "Empty cell"}
+      className={`w-full aspect-square rounded-2xl border transition-all duration-300 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-teal-500/50 ${cellStyle}`}
+      aria-label={ariaLabel}
     >
       {value === "X" && (
         <svg
@@ -83,6 +97,3 @@ export default function Cell({ value, onClick, isWinningCell, isDisabled, isGame
     </button>
   );
 }
-
-
-

@@ -64,3 +64,29 @@ export async function resetGame(gameId) {
   }
   return data.data;
 }
+
+/**
+ * Fetch recent completed game history
+ * GET /api/games/history
+ */
+export async function getGameHistory(limit = 10) {
+  const response = await fetch(`${API_BASE_URL}/games/history?limit=${limit}`);
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to fetch game history');
+  }
+  return data.data;
+}
+
+/**
+ * Fetch aggregate game scoreboard statistics
+ * GET /api/games/stats
+ */
+export async function getGameStats() {
+  const response = await fetch(`${API_BASE_URL}/games/stats`);
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to fetch game statistics');
+  }
+  return data.data;
+}

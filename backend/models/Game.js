@@ -51,6 +51,9 @@ const gameSchema = new mongoose.Schema(
   }
 );
 
+// Index status and createdAt for optimized game history & scoreboard querying
+gameSchema.index({ status: 1, createdAt: -1 });
+
 const Game = mongoose.model('Game', gameSchema);
 
 export default Game;

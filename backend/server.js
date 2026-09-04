@@ -10,19 +10,47 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tictactoe';
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '*';
 
-// Middleware
-app.use(cors());
+// Configure CORS
+app.use(
+  cors({
+    origin: CLIENT_ORIGIN === '*' ? '*' : CLIENT_ORIGIN,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  })
+);
+
+// Express JSON Body Parser
 app.use(express.json());
 
-// Routes
+// Mount API Routes
 app.use('/api', gameRoutes);
 
-// Health check route
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Server is running'
+    message: 'Tic Tac Toe Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Global 404 Handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Cannot ${req.method} ${req.originalUrl}`
+  });
+});
+
+// Global Error Handler
+app.use((err, req, res, _next) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
@@ -34,13 +62,26 @@ const connectDB = async () => {
     });
     console.log('Successfully connected to MongoDB.');
   } catch (err) {
-    console.log('MongoDB connection note:', err.message);
+    console.warn('MongoDB connection note:', err.message);
   }
 };
 
 connectDB();
 
 // Start Express server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+// Graceful shutdown handler
+const gracefulShutdown = async () => {
+  console.log('\nShutdown signal received. Closing server and MongoDB connection...');
+  server.close(async () => {
+    await mongoose.connection.close();
+    console.log('Server and database connection closed cleanly.');
+    process.exit(0);
+  });
+};
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);

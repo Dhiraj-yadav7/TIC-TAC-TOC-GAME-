@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 import Board from "./Board";
-import { createGame, makeMove, resetGame } from "../services/api";
+import Scoreboard from "./Scoreboard";
+import GameHistory from "./GameHistory";
+import { createGame, makeMove, resetGame, getGameStats, getGameHistory } from "../services/api";
 
-// All 8 winning line index combinations on a 3x3 grid for highlight logic
+// All 8 winning line combinations on a 3x3 grid for UI highlight
 const WINNING_COMBINATIONS = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8],
   [0, 3, 6], [1, 4, 7], [2, 5, 8],
   [0, 4, 8], [2, 4, 6],
 ];
 
-// Helper function to find winning cell indices for UI highlighting
+// Helper to determine winning cell line for visual styling
 function getWinningLine(board) {
   for (let i = 0; i < WINNING_COMBINATIONS.length; i++) {
     const [a, b, c] = WINNING_COMBINATIONS[i];
@@ -21,23 +23,25 @@ function getWinningLine(board) {
 }
 
 export default function TicTacToe() {
-  // Backend Source of Truth state stored in React
+  // Backend Source of Truth state
   const [gameId, setGameId] = useState(null);
   const [board, setBoard] = useState(Array(9).fill(""));
   const [currentPlayer, setCurrentPlayer] = useState("X");
   const [winner, setWinner] = useState(null);
   const [status, setStatus] = useState("playing");
 
-  // UI state for loading, in-flight API requests, and errors
+  // UI state
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  // Total game scores across sessions
-  const [scores, setScores] = useState({ x: 0, o: 0, draws: 0 });
-  const [hasScoredCurrentGame, setHasScoredCurrentGame] = useState(false);
+  // Statistics and History state
+  const [stats, setStats] = useState({ xWins: 0, oWins: 0, draws: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
-  // Sync backend game response object to React state
+  // Sync game document from MongoDB into React state
   const updateGameState = (game) => {
     setGameId(game._id);
     setBoard(game.board);
@@ -46,40 +50,54 @@ export default function TicTacToe() {
     setStatus(game.status);
   };
 
-  // 1. Initialize a new game on component mount via POST /api/games
+  // Fetch live scoreboard statistics from API
+  const fetchStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const data = await getGameStats();
+      setStats(data);
+    } catch (err) {
+      console.error("Failed to fetch game stats:", err.message);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  // Fetch recent game history from API
+  const fetchHistory = useCallback(async () => {
+    try {
+      setHistoryLoading(true);
+      const data = await getGameHistory(10);
+      setHistory(data);
+    } catch (err) {
+      console.error("Failed to fetch game history:", err.message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  // Initialize a new game session via POST /api/games
   const initGame = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const game = await createGame();
       updateGameState(game);
-      setHasScoredCurrentGame(false);
     } catch (err) {
-      setError(err.message || "Failed to start a game. Please ensure the backend server is running.");
+      setError(err.message || "Failed to start game. Check your backend connection.");
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Load game session, stats, and history on component mount
   useEffect(() => {
     initGame();
-  }, [initGame]);
+    fetchStats();
+    fetchHistory();
+  }, [initGame, fetchStats, fetchHistory]);
 
-  // Update cumulative session scores when a game ends
-  useEffect(() => {
-    if ((status === "won" || status === "draw") && !hasScoredCurrentGame) {
-      setHasScoredCurrentGame(true);
-      if (status === "won" && winner === "X") {
-        setScores((prev) => ({ ...prev, x: prev.x + 1 }));
-      } else if (status === "won" && winner === "O") {
-        setScores((prev) => ({ ...prev, o: prev.o + 1 }));
-      } else if (status === "draw") {
-        setScores((prev) => ({ ...prev, draws: prev.draws + 1 }));
-      }
-    }
-  }, [status, winner, hasScoredCurrentGame]);
-
-  // Handle move click -> PUT /api/games/:id/move
+  // Handle cell click move
   const handleClick = async (index) => {
     if (!gameId || board[index] !== "" || status !== "playing" || isSubmitting) return;
 
@@ -88,14 +106,20 @@ export default function TicTacToe() {
       setError(null);
       const updatedGame = await makeMove(gameId, index, currentPlayer);
       updateGameState(updatedGame);
+
+      // Refresh aggregate stats and match history from MongoDB when game ends
+      if (updatedGame.status === "won" || updatedGame.status === "draw") {
+        fetchStats();
+        fetchHistory();
+      }
     } catch (err) {
-      setError(err.message || "Failed to make move. Please try again.");
+      setError(err.message || "Failed to record move. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Handle Reset button -> POST /api/games/:id/reset
+  // Handle game reset
   const handleReset = async () => {
     if (!gameId) {
       initGame();
@@ -107,19 +131,12 @@ export default function TicTacToe() {
       setError(null);
       const updatedGame = await resetGame(gameId);
       updateGameState(updatedGame);
-      setHasScoredCurrentGame(false);
     } catch (err) {
       setError(err.message || "Failed to reset game. Starting a new session...");
       initGame();
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // Reset scores back to zero
-  const handleResetScores = () => {
-    setScores({ x: 0, o: 0, draws: 0 });
-    handleReset();
   };
 
   const winningLine = status === "won" ? getWinningLine(board) : [];
@@ -144,8 +161,8 @@ export default function TicTacToe() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-950 via-teal-900 to-emerald-950 text-slate-100 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 font-sans select-none relative overflow-hidden">
-      {/* Subtle ambient backdrop glow */}
+    <div className="min-h-screen bg-gradient-to-br from-teal-950 via-teal-900 to-emerald-950 text-slate-100 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 font-sans select-none relative overflow-x-hidden">
+      {/* Ambient glow backdrop */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header Title */}
@@ -153,7 +170,7 @@ export default function TicTacToe() {
         Tic Tac Toe
       </h1>
       <p className="text-teal-200/70 text-xs sm:text-sm md:text-base mb-6 font-medium tracking-wider uppercase">
-        Classic 3x3 Strategy Game
+        Full-Stack MERN Edition
       </p>
 
       {/* Error Alert Banner */}
@@ -162,6 +179,7 @@ export default function TicTacToe() {
           <span>⚠️ {error}</span>
           <button
             onClick={initGame}
+            type="button"
             className="px-3 py-1 bg-red-800 hover:bg-red-700 text-white font-bold rounded-lg text-xs cursor-pointer transition-colors"
           >
             Retry
@@ -169,30 +187,15 @@ export default function TicTacToe() {
         </div>
       )}
 
-      {/* Scoreboard Card */}
-      <div className="flex items-center gap-4 sm:gap-6 bg-teal-900/70 backdrop-blur-md px-6 py-3.5 rounded-2xl border border-teal-700/50 shadow-xl mb-6 text-sm sm:text-base font-semibold">
-        <div className="flex flex-col items-center min-w-[70px]">
-          <span className="text-teal-300 text-xs uppercase tracking-wider font-bold">Player X</span>
-          <span className="text-xl sm:text-2xl font-extrabold text-white mt-0.5">{scores.x}</span>
-        </div>
-        <div className="w-px h-8 bg-teal-700/60" />
-        <div className="flex flex-col items-center min-w-[70px]">
-          <span className="text-amber-300 text-xs uppercase tracking-wider font-bold">Draws</span>
-          <span className="text-xl sm:text-2xl font-extrabold text-white mt-0.5">{scores.draws}</span>
-        </div>
-        <div className="w-px h-8 bg-teal-700/60" />
-        <div className="flex flex-col items-center min-w-[70px]">
-          <span className="text-purple-300 text-xs uppercase tracking-wider font-bold">Player O</span>
-          <span className="text-xl sm:text-2xl font-extrabold text-white mt-0.5">{scores.o}</span>
-        </div>
-      </div>
+      {/* Live API Scoreboard */}
+      <Scoreboard stats={stats} loading={statsLoading} />
 
       {/* Status Banner */}
       <div className="w-full max-w-[320px] xs:max-w-[360px] sm:max-w-[420px] md:max-w-[460px] mb-6">
         <div
           className={`py-3.5 px-6 rounded-2xl border backdrop-blur-md shadow-lg text-center text-xl sm:text-2xl font-extrabold tracking-wide transition-all duration-300 ${statusStyle}`}
         >
-          {loading ? "Connecting to backend..." : statusText}
+          {loading ? "Connecting to server..." : statusText}
         </div>
       </div>
 
@@ -227,18 +230,10 @@ export default function TicTacToe() {
           </svg>
           {isSubmitting ? "Resetting..." : "Reset Game"}
         </button>
-
-        {(scores.x > 0 || scores.o > 0 || scores.draws > 0) && (
-          <button
-            type="button"
-            onClick={handleResetScores}
-            disabled={loading || isSubmitting}
-            className="px-5 py-3.5 bg-teal-900/60 hover:bg-teal-800/80 active:scale-95 text-teal-200 hover:text-white font-semibold text-xs sm:text-sm rounded-2xl border border-teal-700/50 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/40 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Reset Scores
-          </button>
-        )}
       </div>
+
+      {/* Game History Section */}
+      <GameHistory history={history} loading={historyLoading} onRefresh={fetchHistory} />
     </div>
   );
 }
