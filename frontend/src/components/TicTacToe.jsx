@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import Board from "./Board";
 import Scoreboard from "./Scoreboard";
 import GameHistory from "./GameHistory";
+import PlayerSetup from "./PlayerSetup";
 import { createGame, makeMove, resetGame, getGameStats, getGameHistory } from "../services/api";
 
 // All 8 winning line combinations on a 3x3 grid for UI highlight
@@ -23,15 +24,19 @@ function getWinningLine(board) {
 }
 
 export default function TicTacToe() {
-  // Backend Source of Truth state
+  // Game session & backend source of truth state
   const [gameId, setGameId] = useState(null);
+  const [playerX, setPlayerX] = useState("");
+  const [playerO, setPlayerO] = useState("");
   const [board, setBoard] = useState(Array(9).fill(""));
   const [currentPlayer, setCurrentPlayer] = useState("X");
   const [winner, setWinner] = useState(null);
   const [status, setStatus] = useState("playing");
 
-  // UI state
-  const [loading, setLoading] = useState(true);
+  const [isGameStarted, setIsGameStarted] = useState(false);
+
+  // UI loading, submitting, and error states
+  const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -44,10 +49,13 @@ export default function TicTacToe() {
   // Sync game document from MongoDB into React state
   const updateGameState = (game) => {
     setGameId(game._id);
+    setPlayerX(game.playerX);
+    setPlayerO(game.playerO);
     setBoard(game.board);
     setCurrentPlayer(game.currentPlayer);
     setWinner(game.winner);
     setStatus(game.status);
+    setIsGameStarted(true);
   };
 
   // Fetch live scoreboard statistics from API
@@ -76,28 +84,27 @@ export default function TicTacToe() {
     }
   }, []);
 
-  // Initialize a new game session via POST /api/games
-  const initGame = useCallback(async () => {
+  // Fetch stats and history on mount
+  useEffect(() => {
+    fetchStats();
+    fetchHistory();
+  }, [fetchStats, fetchHistory]);
+
+  // Start game with player names via POST /api/games
+  const handleStartGame = async (nameX, nameO) => {
     try {
       setLoading(true);
       setError(null);
-      const game = await createGame();
+      const game = await createGame(nameX, nameO);
       updateGameState(game);
     } catch (err) {
-      setError(err.message || "Failed to start game. Check your backend connection.");
+      setError(err.message || "Failed to start game session. Please check your backend.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  // Load game session, stats, and history on component mount
-  useEffect(() => {
-    initGame();
-    fetchStats();
-    fetchHistory();
-  }, [initGame, fetchStats, fetchHistory]);
-
-  // Handle cell click move
+  // Handle cell click move -> PUT /api/games/:id/move
   const handleClick = async (index) => {
     if (!gameId || board[index] !== "" || status !== "playing" || isSubmitting) return;
 
@@ -107,7 +114,7 @@ export default function TicTacToe() {
       const updatedGame = await makeMove(gameId, index, currentPlayer);
       updateGameState(updatedGame);
 
-      // Refresh aggregate stats and match history from MongoDB when game ends
+      // Refresh stats and history when game ends
       if (updatedGame.status === "won" || updatedGame.status === "draw") {
         fetchStats();
         fetchHistory();
@@ -119,12 +126,9 @@ export default function TicTacToe() {
     }
   };
 
-  // Handle game reset
+  // Reset game board on backend while preserving current players
   const handleReset = async () => {
-    if (!gameId) {
-      initGame();
-      return;
-    }
+    if (!gameId) return;
 
     try {
       setIsSubmitting(true);
@@ -132,21 +136,34 @@ export default function TicTacToe() {
       const updatedGame = await resetGame(gameId);
       updateGameState(updatedGame);
     } catch (err) {
-      setError(err.message || "Failed to reset game. Starting a new session...");
-      initGame();
+      setError(err.message || "Failed to reset game.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Change players / Return to Player Setup
+  const handleChangePlayers = () => {
+    setGameId(null);
+    setIsGameStarted(false);
+    setBoard(Array(9).fill(""));
+    setStatus("playing");
+    setWinner(null);
+    setError(null);
+  };
+
   const winningLine = status === "won" ? getWinningLine(board) : [];
   const isXNext = currentPlayer === "X";
+
+  // Dynamic player name formatting
+  const activePlayerName = isXNext ? playerX : playerO;
+  const winnerPlayerName = winner === "X" ? playerX : winner === "O" ? playerO : "";
 
   let statusText = "";
   let statusStyle = "";
 
   if (status === "won" && winner) {
-    statusText = `Player ${winner} Wins!`;
+    statusText = `${winnerPlayerName} Wins!`;
     statusStyle = winner === "X"
       ? "bg-teal-500/20 text-teal-200 border-teal-400/60 shadow-teal-500/30 animate-bounce"
       : "bg-purple-500/20 text-purple-200 border-purple-400/60 shadow-purple-500/30 animate-bounce";
@@ -154,7 +171,7 @@ export default function TicTacToe() {
     statusText = "It's a Draw!";
     statusStyle = "bg-amber-500/20 text-amber-200 border-amber-400/60 shadow-amber-500/30";
   } else {
-    statusText = `Player ${currentPlayer}'s Turn`;
+    statusText = `${activePlayerName} (${currentPlayer})'s Turn`;
     statusStyle = isXNext
       ? "bg-teal-900/80 text-teal-200 border-teal-500/40"
       : "bg-purple-950/80 text-purple-200 border-purple-500/40";
@@ -175,62 +192,70 @@ export default function TicTacToe() {
 
       {/* Error Alert Banner */}
       {error && (
-        <div className="w-full max-w-[460px] mb-4 p-4 rounded-2xl bg-red-900/80 border border-red-500/50 text-red-200 text-sm flex items-center justify-between gap-3 shadow-lg backdrop-blur-md">
+        <div className="w-full max-w-[460px] mb-4 p-4 rounded-2xl bg-red-900/80 border border-red-500/50 text-red-200 text-sm flex items-center justify-between gap-3 shadow-lg backdrop-blur-md z-20">
           <span>⚠️ {error}</span>
           <button
-            onClick={initGame}
+            onClick={handleChangePlayers}
             type="button"
             className="px-3 py-1 bg-red-800 hover:bg-red-700 text-white font-bold rounded-lg text-xs cursor-pointer transition-colors"
           >
-            Retry
+            Reset
           </button>
         </div>
       )}
 
       {/* Live API Scoreboard */}
-      <Scoreboard stats={stats} loading={statsLoading} />
+      <Scoreboard stats={stats} loading={statsLoading} playerX={playerX || "Player X"} playerO={playerO || "Player O"} />
 
-      {/* Status Banner */}
-      <div className="w-full max-w-[320px] xs:max-w-[360px] sm:max-w-[420px] md:max-w-[460px] mb-6">
-        <div
-          className={`py-3.5 px-6 rounded-2xl border backdrop-blur-md shadow-lg text-center text-xl sm:text-2xl font-extrabold tracking-wide transition-all duration-300 ${statusStyle}`}
-        >
-          {loading ? "Connecting to server..." : statusText}
-        </div>
-      </div>
-
-      {/* Game Board Container */}
-      <div className="flex flex-col items-center justify-center w-full z-10">
-        {loading ? (
-          <div className="w-full max-w-[320px] xs:max-w-[360px] sm:max-w-[420px] md:max-w-[460px] aspect-square p-5 bg-teal-900/60 backdrop-blur-md rounded-3xl border border-teal-700/40 shadow-2xl flex flex-col items-center justify-center gap-3 text-teal-200">
-            <div className="w-10 h-10 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
-            <span className="font-semibold text-sm">Starting game session...</span>
+      {/* Conditional Rendering: Player Setup vs Game Board */}
+      {!isGameStarted ? (
+        <PlayerSetup onStartGame={handleStartGame} loading={loading} />
+      ) : (
+        <>
+          {/* Status Banner */}
+          <div className="w-full max-w-[320px] xs:max-w-[360px] sm:max-w-[420px] md:max-w-[460px] mb-6">
+            <div
+              className={`py-3.5 px-6 rounded-2xl border backdrop-blur-md shadow-lg text-center text-xl sm:text-2xl font-extrabold tracking-wide transition-all duration-300 ${statusStyle}`}
+            >
+              {statusText}
+            </div>
           </div>
-        ) : (
-          <Board
-            board={board}
-            onCellClick={handleClick}
-            winningLine={winningLine}
-            isGameOver={status !== "playing" || isSubmitting}
-            isXNext={isXNext}
-          />
-        )}
-      </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mt-8 z-10">
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={loading || isSubmitting}
-          className="px-8 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-bold text-base sm:text-lg rounded-2xl shadow-xl shadow-purple-950/50 hover:shadow-purple-700/40 transition-all duration-200 cursor-pointer border border-purple-400/30 focus:outline-none focus:ring-4 focus:ring-purple-500/40 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          {isSubmitting ? "Resetting..." : "Reset Game"}
-        </button>
-      </div>
+          {/* Game Board Container */}
+          <div className="flex flex-col items-center justify-center w-full z-10">
+            <Board
+              board={board}
+              onCellClick={handleClick}
+              winningLine={winningLine}
+              isGameOver={status !== "playing" || isSubmitting}
+              isXNext={isXNext}
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mt-8 z-10">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={isSubmitting}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-bold text-sm sm:text-base rounded-2xl shadow-xl shadow-purple-950/50 transition-all cursor-pointer border border-purple-400/30 flex items-center gap-2 disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {isSubmitting ? "Resetting..." : "Reset Board"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleChangePlayers}
+              className="px-5 py-3 bg-teal-900/60 hover:bg-teal-800/80 active:scale-95 text-teal-200 hover:text-white font-semibold text-xs sm:text-sm rounded-2xl border border-teal-700/50 transition-all cursor-pointer"
+            >
+              ⚙️ Change Players
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Game History Section */}
       <GameHistory history={history} loading={historyLoading} onRefresh={fetchHistory} />

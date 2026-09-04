@@ -4,12 +4,12 @@ const gameSchema = new mongoose.Schema(
   {
     playerX: {
       type: String,
-      default: 'Player X',
+      required: [true, 'Player X name is required'],
       trim: true
     },
     playerO: {
       type: String,
-      default: 'Player O',
+      required: [true, 'Player O name is required'],
       trim: true
     },
     board: {

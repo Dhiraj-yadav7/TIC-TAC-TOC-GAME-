@@ -23,11 +23,25 @@ export const createGame = async (req, res) => {
   try {
     const { playerX, playerO } = req.body || {};
 
-    const gameData = {};
-    if (playerX) gameData.playerX = playerX;
-    if (playerO) gameData.playerO = playerO;
+    // Validate player names
+    if (!playerX || typeof playerX !== 'string' || !playerX.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Player X name is required'
+      });
+    }
 
-    const game = new Game(gameData);
+    if (!playerO || typeof playerO !== 'string' || !playerO.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Player O name is required'
+      });
+    }
+
+    const game = new Game({
+      playerX: playerX.trim(),
+      playerO: playerO.trim()
+    });
     await game.save();
 
     return res.status(201).json({
@@ -161,7 +175,7 @@ export const makeMove = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: game.status === 'won'
-        ? `Player ${winningPlayer} won!`
+        ? `Player ${winningPlayer === 'X' ? game.playerX : game.playerO} won!`
         : game.status === 'draw'
         ? 'Game ended in a draw!'
         : 'Move recorded successfully',
@@ -197,7 +211,7 @@ export const resetGame = async (req, res) => {
       });
     }
 
-    // Reset game state back to initial values
+    // Reset game state back to initial values while preserving player names
     game.board = Array(9).fill('');
     game.status = 'playing';
     game.winner = null;
