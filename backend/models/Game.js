@@ -12,6 +12,16 @@ const gameSchema = new mongoose.Schema(
       required: [true, 'Player O name is required'],
       trim: true
     },
+    userX: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    userO: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
     board: {
       type: [
         {

@@ -43,8 +43,16 @@ export default function TicTacToe() {
   // Statistics and History state
   const [stats, setStats] = useState({ xWins: 0, oWins: 0, draws: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
-  const [history, setHistory] = useState([]);
+
+  const [historyData, setHistoryData] = useState({
+    games: [],
+    currentPage: 1,
+    totalPages: 1,
+    totalGames: 0
+  });
+  const [historyPage, setHistoryPage] = useState(1);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(null);
 
   // Sync game document from MongoDB into React state
   const updateGameState = (game) => {
@@ -71,14 +79,17 @@ export default function TicTacToe() {
     }
   }, []);
 
-  // Fetch recent game history from API
-  const fetchHistory = useCallback(async () => {
+  // Fetch paginated game history from API
+  const fetchHistory = useCallback(async (page = 1) => {
     try {
       setHistoryLoading(true);
-      const data = await getGameHistory(10);
-      setHistory(data);
+      setHistoryError(null);
+      const data = await getGameHistory(page, 5);
+      setHistoryData(data || { games: [], currentPage: 1, totalPages: 1, totalGames: 0 });
+      setHistoryPage(data?.currentPage || page);
     } catch (err) {
       console.error("Failed to fetch game history:", err.message);
+      setHistoryError(err.message || "Failed to load game history.");
     } finally {
       setHistoryLoading(false);
     }
@@ -87,8 +98,13 @@ export default function TicTacToe() {
   // Fetch stats and history on mount
   useEffect(() => {
     fetchStats();
-    fetchHistory();
+    fetchHistory(1);
   }, [fetchStats, fetchHistory]);
+
+  const handlePageChange = (newPage) => {
+    setHistoryPage(newPage);
+    fetchHistory(newPage);
+  };
 
   // Start game with player names via POST /api/games
   const handleStartGame = async (nameX, nameO) => {
@@ -117,7 +133,7 @@ export default function TicTacToe() {
       // Refresh stats and history when game ends
       if (updatedGame.status === "won" || updatedGame.status === "draw") {
         fetchStats();
-        fetchHistory();
+        fetchHistory(1);
       }
     } catch (err) {
       setError(err.message || "Failed to record move. Please try again.");
@@ -258,7 +274,13 @@ export default function TicTacToe() {
       )}
 
       {/* Game History Section */}
-      <GameHistory history={history} loading={historyLoading} onRefresh={fetchHistory} />
+      <GameHistory
+        historyData={historyData}
+        loading={historyLoading}
+        error={historyError}
+        onRefresh={() => fetchHistory(historyPage)}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

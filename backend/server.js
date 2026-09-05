@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import gameRoutes from './routes/gameRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +34,10 @@ app.get('/', (req, res) => {
     frontendUrl: 'http://localhost:5173',
     healthCheck: '/api/health',
     endpoints: [
+      'POST /api/auth/register',
+      'POST /api/auth/login',
+      'GET /api/auth/me',
+      'GET /api/users/me/stats',
       'POST /api/games',
       'GET /api/games/:id',
       'PUT /api/games/:id/move',
@@ -43,6 +49,8 @@ app.get('/', (req, res) => {
 });
 
 // Mount API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api', gameRoutes);
 
 // Health check endpoint

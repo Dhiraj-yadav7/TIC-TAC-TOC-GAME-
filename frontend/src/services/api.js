@@ -1,6 +1,16 @@
 // API base URL configured from Vite environment variables with fallback
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Helper function to build headers with Authorization Bearer token if present
+function getAuthHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = localStorage.getItem('tictactoe_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 /**
  * Start a new game session
  * POST /api/games
@@ -8,7 +18,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 export async function createGame(playerX = 'Player X', playerO = 'Player O') {
   const response = await fetch(`${API_BASE_URL}/games`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ playerX, playerO })
   });
   const data = await response.json();
@@ -23,7 +33,9 @@ export async function createGame(playerX = 'Player X', playerO = 'Player O') {
  * GET /api/games/:id
  */
 export async function getGame(gameId) {
-  const response = await fetch(`${API_BASE_URL}/games/${gameId}`);
+  const response = await fetch(`${API_BASE_URL}/games/${gameId}`, {
+    headers: getAuthHeaders()
+  });
   const data = await response.json();
   if (!response.ok || !data.success) {
     throw new Error(data.message || 'Failed to fetch game state');
@@ -38,7 +50,7 @@ export async function getGame(gameId) {
 export async function makeMove(gameId, index, player) {
   const response = await fetch(`${API_BASE_URL}/games/${gameId}/move`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ index, player })
   });
   const data = await response.json();
@@ -55,7 +67,7 @@ export async function makeMove(gameId, index, player) {
 export async function resetGame(gameId) {
   const response = await fetch(`${API_BASE_URL}/games/${gameId}/reset`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify({})
   });
   const data = await response.json();
@@ -66,11 +78,13 @@ export async function resetGame(gameId) {
 }
 
 /**
- * Fetch recent completed game history
- * GET /api/games/history
+ * Fetch paginated completed game history
+ * GET /api/games/history?page=1&limit=5
  */
-export async function getGameHistory(limit = 10) {
-  const response = await fetch(`${API_BASE_URL}/games/history?limit=${limit}`);
+export async function getGameHistory(page = 1, limit = 5) {
+  const response = await fetch(`${API_BASE_URL}/games/history?page=${page}&limit=${limit}`, {
+    headers: getAuthHeaders()
+  });
   const data = await response.json();
   if (!response.ok || !data.success) {
     throw new Error(data.message || 'Failed to fetch game history');
@@ -83,7 +97,9 @@ export async function getGameHistory(limit = 10) {
  * GET /api/games/stats
  */
 export async function getGameStats() {
-  const response = await fetch(`${API_BASE_URL}/games/stats`);
+  const response = await fetch(`${API_BASE_URL}/games/stats`, {
+    headers: getAuthHeaders()
+  });
   const data = await response.json();
   if (!response.ok || !data.success) {
     throw new Error(data.message || 'Failed to fetch game statistics');

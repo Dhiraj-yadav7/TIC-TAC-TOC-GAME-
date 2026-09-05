@@ -21,7 +21,7 @@ const checkWinner = (board) => {
 // 1. Start a new game - POST /api/games
 export const createGame = async (req, res) => {
   try {
-    const { playerX, playerO } = req.body || {};
+    const { playerX, playerO, userX, userO } = req.body || {};
 
     // Validate player names
     if (!playerX || typeof playerX !== 'string' || !playerX.trim()) {
@@ -40,7 +40,9 @@ export const createGame = async (req, res) => {
 
     const game = new Game({
       playerX: playerX.trim(),
-      playerO: playerO.trim()
+      playerO: playerO.trim(),
+      userX: userX || (req.user ? req.user._id : null),
+      userO: userO || null
     });
     await game.save();
 
@@ -234,22 +236,58 @@ export const resetGame = async (req, res) => {
   }
 };
 
-// 5. Get recent game history - GET /api/games/history
+// 5. Get completed game history with pagination - GET /api/games/history
 export const getGameHistory = async (req, res) => {
   try {
-    const limit = Math.min(Number(req.query.limit) || 10, 50);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 5));
+    const skip = (page - 1) * limit;
 
-    const history = await Game.find({
-      status: { $in: ['won', 'draw'] }
-    })
-      .select('playerX playerO winner status createdAt')
+    const filter = { status: { $in: ['won', 'draw'] } };
+
+    const totalGames = await Game.countDocuments(filter);
+    const rawGames = await Game.find(filter)
       .sort({ createdAt: -1 })
+      .skip(skip)
       .limit(limit)
       .lean();
 
+    const games = rawGames.map((game) => {
+      let winnerName = null;
+      let winnerSymbol = game.winner || null;
+
+      if (game.status === 'won') {
+        if (game.winner === 'X') {
+          winnerName = game.playerX;
+        } else if (game.winner === 'O') {
+          winnerName = game.playerO;
+        }
+      }
+
+      return {
+        _id: game._id,
+        playerX: game.playerX,
+        playerO: game.playerO,
+        winnerName,
+        winnerSymbol,
+        status: game.status,
+        createdAt: game.createdAt
+      };
+    });
+
+    const totalPages = Math.ceil(totalGames / limit) || 1;
+
+    const paginationData = {
+      games,
+      currentPage: page,
+      totalPages,
+      totalGames
+    };
+
     return res.status(200).json({
       success: true,
-      data: history
+      data: paginationData,
+      ...paginationData
     });
   } catch (error) {
     return res.status(500).json({
