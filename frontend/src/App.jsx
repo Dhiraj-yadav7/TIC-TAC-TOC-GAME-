@@ -6,6 +6,8 @@ import Register from './components/Register';
 import TicTacToe from './components/TicTacToe';
 import GameHistory from './components/GameHistory';
 import Profile from './components/Profile';
+import Leaderboard from './components/Leaderboard';
+import OnlineGame from './components/OnlineGame';
 import { getGameHistory } from './services/api';
 
 function AppContent() {
@@ -92,6 +94,8 @@ function AppContent() {
           <>
             {activeTab === 'game' && <TicTacToe />}
 
+            {activeTab === 'online' && <OnlineGame />}
+
             {activeTab === 'history' && (
               <div className="flex flex-col items-center w-full">
                 <GameHistory
@@ -106,6 +110,8 @@ function AppContent() {
                 />
               </div>
             )}
+
+            {activeTab === 'leaderboard' && <Leaderboard />}
 
             {activeTab === 'profile' && (
               <Profile onStartGame={() => setActiveTab('game')} />

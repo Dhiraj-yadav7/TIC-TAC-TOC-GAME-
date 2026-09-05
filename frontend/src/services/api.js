@@ -106,3 +106,16 @@ export async function getGameStats() {
   }
   return data.data;
 }
+
+/**
+ * Fetch global registered users leaderboard
+ * GET /api/leaderboard
+ */
+export async function getLeaderboard() {
+  const response = await fetch(`${API_BASE_URL}/leaderboard`);
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Failed to fetch global leaderboard');
+  }
+  return data.data;
+}

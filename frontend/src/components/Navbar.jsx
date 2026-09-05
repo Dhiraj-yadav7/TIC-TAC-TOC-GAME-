@@ -26,22 +26,33 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
         {/* Navigation Tabs (when authenticated) */}
         {isAuthenticated && (
-          <div className="flex items-center gap-1 sm:gap-2 bg-teal-900/60 p-1 rounded-2xl border border-teal-800/60">
+          <div className="flex items-center gap-1 sm:gap-1.5 bg-teal-900/60 p-1 rounded-2xl border border-teal-800/60 flex-wrap justify-center">
             <button
               onClick={() => setActiveTab('game')}
               type="button"
-              className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === 'game'
                   ? 'bg-teal-700/80 text-teal-100 shadow-md border border-teal-500/40'
                   : 'text-teal-300/70 hover:text-teal-100'
               }`}
             >
-              🎮 Game
+              🎮 Local
+            </button>
+            <button
+              onClick={() => setActiveTab('online')}
+              type="button"
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === 'online'
+                  ? 'bg-teal-700/80 text-teal-100 shadow-md border border-teal-500/40'
+                  : 'text-teal-300/70 hover:text-teal-100'
+              }`}
+            >
+              🌐 Online
             </button>
             <button
               onClick={() => setActiveTab('history')}
               type="button"
-              className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === 'history'
                   ? 'bg-teal-700/80 text-teal-100 shadow-md border border-teal-500/40'
                   : 'text-teal-300/70 hover:text-teal-100'
@@ -50,9 +61,20 @@ export default function Navbar({ activeTab, setActiveTab }) {
               📜 History
             </button>
             <button
+              onClick={() => setActiveTab('leaderboard')}
+              type="button"
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === 'leaderboard'
+                  ? 'bg-teal-700/80 text-teal-100 shadow-md border border-teal-500/40'
+                  : 'text-teal-300/70 hover:text-teal-100'
+              }`}
+            >
+              🏆 Leaderboard
+            </button>
+            <button
               onClick={() => setActiveTab('profile')}
               type="button"
-              className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === 'profile'
                   ? 'bg-teal-700/80 text-teal-100 shadow-md border border-teal-500/40'
                   : 'text-teal-300/70 hover:text-teal-100'

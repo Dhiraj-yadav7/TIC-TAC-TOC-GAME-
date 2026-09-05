@@ -1,10 +1,14 @@
+import http from 'http';
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { Server } from 'socket.io';
 import gameRoutes from './routes/gameRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import leaderboardRoutes from './routes/leaderboardRoutes.js';
+import initGameSocket from './sockets/gameSocket.js';
 
 // Load environment variables
 dotenv.config();
@@ -13,6 +17,18 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tictactoe';
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '*';
+
+// Create HTTP Server & Socket.IO Instance
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: CLIENT_ORIGIN === '*' ? '*' : CLIENT_ORIGIN,
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+  }
+});
+
+// Initialize Socket.IO Online Multiplayer Handlers
+initGameSocket(io);
 
 // Configure CORS
 app.use(
@@ -30,7 +46,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Tic Tac Toe Backend API is running!',
+    message: 'Tic Tac Toe Backend API is running with Socket.IO!',
     frontendUrl: 'http://localhost:5173',
     healthCheck: '/api/health',
     endpoints: [
@@ -38,6 +54,7 @@ app.get('/', (req, res) => {
       'POST /api/auth/login',
       'GET /api/auth/me',
       'GET /api/users/me/stats',
+      'GET /api/leaderboard',
       'POST /api/games',
       'GET /api/games/:id',
       'PUT /api/games/:id/move',
@@ -51,6 +68,7 @@ app.get('/', (req, res) => {
 // Mount API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api', leaderboardRoutes);
 app.use('/api', gameRoutes);
 
 // Health check endpoint
