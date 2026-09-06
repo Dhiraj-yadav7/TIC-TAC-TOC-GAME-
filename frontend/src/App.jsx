@@ -92,7 +92,9 @@ function AppContent() {
           )
         ) : (
           <>
-            {activeTab === 'game' && <TicTacToe />}
+            {activeTab === 'game' && (
+              <TicTacToe onSwitchToOnline={() => setActiveTab('online')} />
+            )}
 
             {activeTab === 'online' && <OnlineGame />}
 

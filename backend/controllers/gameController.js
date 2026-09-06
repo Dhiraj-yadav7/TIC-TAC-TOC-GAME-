@@ -245,6 +245,17 @@ export const getGameHistory = async (req, res) => {
 
     const filter = { status: { $in: ['won', 'draw'] } };
 
+    // If user is authenticated, filter history to matches involving this user
+    if (req.user) {
+      const escapedName = req.user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { userX: req.user._id },
+        { userO: req.user._id },
+        { playerX: new RegExp(`^${escapedName}$`, 'i') },
+        { playerO: new RegExp(`^${escapedName}$`, 'i') }
+      ];
+    }
+
     const totalGames = await Game.countDocuments(filter);
     const rawGames = await Game.find(filter)
       .sort({ createdAt: -1 })
@@ -301,10 +312,27 @@ export const getGameHistory = async (req, res) => {
 // 6. Get aggregate game statistics - GET /api/games/stats
 export const getGameStats = async (req, res) => {
   try {
+    let xWinsFilter = { status: 'won', winner: 'X' };
+    let oWinsFilter = { status: 'won', winner: 'O' };
+    let drawsFilter = { status: 'draw' };
+
+    if (req.user) {
+      const escapedName = req.user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const userInvolved = [
+        { userX: req.user._id },
+        { userO: req.user._id },
+        { playerX: new RegExp(`^${escapedName}$`, 'i') },
+        { playerO: new RegExp(`^${escapedName}$`, 'i') }
+      ];
+      xWinsFilter.$or = userInvolved;
+      oWinsFilter.$or = userInvolved;
+      drawsFilter.$or = userInvolved;
+    }
+
     const [xWins, oWins, draws] = await Promise.all([
-      Game.countDocuments({ status: 'won', winner: 'X' }),
-      Game.countDocuments({ status: 'won', winner: 'O' }),
-      Game.countDocuments({ status: 'draw' })
+      Game.countDocuments(xWinsFilter),
+      Game.countDocuments(oWinsFilter),
+      Game.countDocuments(drawsFilter)
     ]);
 
     return res.status(200).json({

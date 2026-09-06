@@ -7,17 +7,18 @@ import {
   getGameHistory,
   getGameStats
 } from '../controllers/gameController.js';
+import { optionalProtect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // 1. Start a new game
-router.post('/games', createGame);
+router.post('/games', optionalProtect, createGame);
 
 // 2. Get recent game history (Registered before /games/:id)
-router.get('/games/history', getGameHistory);
+router.get('/games/history', optionalProtect, getGameHistory);
 
 // 3. Get aggregate scoreboard stats (Registered before /games/:id)
-router.get('/games/stats', getGameStats);
+router.get('/games/stats', optionalProtect, getGameStats);
 
 // 4. Get a game by ID
 router.get('/games/:id', getGameById);

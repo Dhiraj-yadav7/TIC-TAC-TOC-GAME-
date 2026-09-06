@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Game from '../models/Game.js';
 
 // In-memory store for active online multiplayer game rooms
@@ -9,6 +10,11 @@ const WINNING_COMBINATIONS = [
   [0, 3, 6], [1, 4, 7], [2, 5, 8],
   [0, 4, 8], [2, 4, 6]
 ];
+
+// Helper to check valid ObjectId
+function sanitizeUserId(id) {
+  return id && mongoose.Types.ObjectId.isValid(id) ? id : null;
+}
 
 // Helper function to check winner on backend board state
 function checkWinner(board) {
@@ -48,7 +54,7 @@ export default function initGameSocket(io) {
         currentPlayer: 'X',
         playerX: {
           socketId: socket.id,
-          userId: userId || null,
+          userId: sanitizeUserId(userId),
           name: name && name.trim() ? name.trim() : 'Player X'
         },
         playerO: null,
@@ -71,7 +77,7 @@ export default function initGameSocket(io) {
       const room = rooms.get(code);
 
       if (!room) {
-        socket.emit('error', { message: 'Room code not found. Please check code.' });
+        socket.emit('error', { message: 'Room code not found. Please check your code.' });
         return;
       }
 
@@ -82,7 +88,7 @@ export default function initGameSocket(io) {
 
       room.playerO = {
         socketId: socket.id,
-        userId: userId || null,
+        userId: sanitizeUserId(userId),
         name: name && name.trim() ? name.trim() : 'Player O'
       };
       room.status = 'playing';
@@ -143,7 +149,7 @@ export default function initGameSocket(io) {
           await Game.create({
             playerX: room.playerX.name,
             playerO: room.playerO ? room.playerO.name : 'Player O',
-            userX: room.playerX.userId || null,
+            userX: room.playerX.userId,
             userO: room.playerO ? room.playerO.userId : null,
             board: room.board,
             winner: winResult.winner,
@@ -163,7 +169,7 @@ export default function initGameSocket(io) {
           await Game.create({
             playerX: room.playerX.name,
             playerO: room.playerO ? room.playerO.name : 'Player O',
-            userX: room.playerX.userId || null,
+            userX: room.playerX.userId,
             userO: room.playerO ? room.playerO.userId : null,
             board: room.board,
             winner: null,
@@ -182,7 +188,33 @@ export default function initGameSocket(io) {
       }
     });
 
-    // 4. Leave Room Event
+    // 4. Restart / Play Again Online Room Event
+    socket.on('restartGame', ({ roomCode }) => {
+      const code = roomCode ? roomCode.trim().toUpperCase() : '';
+      const room = rooms.get(code);
+
+      if (!room) {
+        socket.emit('error', { message: 'Room not found.' });
+        return;
+      }
+
+      if (!room.playerX || !room.playerO) {
+        socket.emit('error', { message: 'Cannot restart. Room requires two connected players.' });
+        return;
+      }
+
+      // Reset room state for new round
+      room.board = Array(9).fill('');
+      room.status = 'playing';
+      room.currentPlayer = 'X';
+      room.winner = null;
+      room.winningLine = [];
+
+      io.to(code).emit('gameRestarted', room);
+      io.to(code).emit('gameUpdated', room);
+    });
+
+    // 5. Leave Room Event
     socket.on('leaveRoom', ({ roomCode }) => {
       const code = roomCode ? roomCode.trim().toUpperCase() : '';
       const room = rooms.get(code);
@@ -206,7 +238,7 @@ export default function initGameSocket(io) {
       }
     });
 
-    // 5. Socket Disconnection Handler
+    // 6. Socket Disconnection Handler
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
       rooms.forEach((room, code) => {

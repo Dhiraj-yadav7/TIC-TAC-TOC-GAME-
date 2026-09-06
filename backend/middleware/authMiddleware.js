@@ -41,3 +41,18 @@ export const protect = async (req, res, next) => {
     });
   }
 };
+
+export const optionalProtect = async (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const jwtSecret = process.env.JWT_SECRET || 'tictactoe_jwt_secret_key_2026';
+      const decoded = jwt.verify(token, jwtSecret);
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (error) {
+      console.warn('Optional auth token invalid:', error.message);
+      req.user = null;
+    }
+  }
+  return next();
+};

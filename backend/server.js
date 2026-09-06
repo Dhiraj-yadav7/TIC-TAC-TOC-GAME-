@@ -112,8 +112,8 @@ const connectDB = async () => {
 
 connectDB();
 
-// Start Express server
-const server = app.listen(PORT, () => {
+// Start HTTP server with Socket.IO attached
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
