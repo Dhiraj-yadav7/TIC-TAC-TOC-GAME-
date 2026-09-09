@@ -71,12 +71,31 @@ app.use('/api/users', userRoutes);
 app.use('/api', leaderboardRoutes);
 app.use('/api', gameRoutes);
 
-// Health check endpoint
+// Server Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Tic Tac Toe Server is running',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Database Health check endpoint
+app.get('/api/health/db', (req, res) => {
+  const isConnected = mongoose.connection.readyState === 1;
+  const dbName = mongoose.connection.name || 'tictactoe';
+
+  if (isConnected) {
+    return res.status(200).json({
+      success: true,
+      message: 'MongoDB connection is working',
+      database: dbName
+    });
+  }
+
+  return res.status(503).json({
+    success: false,
+    message: 'MongoDB connection is not available'
   });
 });
 
@@ -104,9 +123,9 @@ const connectDB = async () => {
     await mongoose.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 5000
     });
-    console.log('Successfully connected to MongoDB.');
+    console.log('MongoDB connected successfully');
   } catch (err) {
-    console.warn('MongoDB connection note:', err.message);
+    console.error('MongoDB connection failed:', err.message);
   }
 };
 
@@ -114,7 +133,7 @@ connectDB();
 
 // Start HTTP server with Socket.IO attached
 server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Graceful shutdown handler
