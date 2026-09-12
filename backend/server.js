@@ -18,11 +18,31 @@ const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tictactoe';
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '*';
 
+// Parse allowed origins (supports wildcard or comma-separated origins for production)
+const allowedOrigins = CLIENT_ORIGIN === '*'
+  ? '*'
+  : CLIENT_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins === '*') {
+      return callback(null, true);
+    }
+    if (Array.isArray(allowedOrigins) && allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS policy does not allow access from origin: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
 // Create HTTP Server & Socket.IO Instance
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: CLIENT_ORIGIN === '*' ? '*' : CLIENT_ORIGIN,
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE']
   }
 });
@@ -31,13 +51,7 @@ const io = new Server(server, {
 initGameSocket(io);
 
 // Configure CORS
-app.use(
-  cors({
-    origin: CLIENT_ORIGIN === '*' ? '*' : CLIENT_ORIGIN,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  })
-);
+app.use(cors(corsOptions));
 
 // Express JSON Body Parser
 app.use(express.json());
@@ -47,7 +61,7 @@ app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Tic Tac Toe Backend API is running with Socket.IO!',
-    frontendUrl: 'http://localhost:5173',
+    frontendUrl: CLIENT_ORIGIN !== '*' ? CLIENT_ORIGIN : 'http://localhost:5173',
     healthCheck: '/api/health',
     endpoints: [
       'POST /api/auth/register',
@@ -109,7 +123,7 @@ app.use((req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, _next) => {
-  console.error('Unhandled Server Error:', err);
+  console.error('Unhandled Server Error:', err.message || err);
   res.status(500).json({
     success: false,
     message: 'Internal server error',
@@ -131,8 +145,8 @@ const connectDB = async () => {
 
 connectDB();
 
-// Start HTTP server with Socket.IO attached
-server.listen(PORT, () => {
+// Start HTTP server with Socket.IO attached (bound to 0.0.0.0 for cloud hosting)
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 
@@ -140,11 +154,17 @@ server.listen(PORT, () => {
 const gracefulShutdown = async () => {
   console.log('\nShutdown signal received. Closing server and MongoDB connection...');
   server.close(async () => {
-    await mongoose.connection.close();
-    console.log('Server and database connection closed cleanly.');
-    process.exit(0);
+    try {
+      await mongoose.connection.close();
+      console.log('Server and database connection closed cleanly.');
+      process.exit(0);
+    } catch (err) {
+      console.error('Error during database disconnection:', err.message);
+      process.exit(1);
+    }
   });
 };
 
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
+
