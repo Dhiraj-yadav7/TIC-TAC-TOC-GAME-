@@ -3,7 +3,17 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import dns from 'dns';
 import { Server } from 'socket.io';
+
+// Configure DNS servers for reliable SRV resolution on Windows
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+  dns.setDefaultResultOrder('ipv4first');
+} catch (err) {
+  console.warn('DNS server override failed, using default system DNS:', err.message);
+}
+
 import gameRoutes from './routes/gameRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';

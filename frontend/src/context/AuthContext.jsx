@@ -34,7 +34,6 @@ export function AuthProvider({ children }) {
   // Login handler
   const login = async (email, password) => {
     try {
-      setLoading(true);
       setError(null);
       const data = await loginUser({ email, password });
       
@@ -45,15 +44,12 @@ export function AuthProvider({ children }) {
     } catch (err) {
       setError(err.message);
       throw err;
-    } finally {
-      setLoading(false);
     }
   };
 
   // Register handler
   const register = async (name, email, password) => {
     try {
-      setLoading(true);
       setError(null);
       const data = await registerUser({ name, email, password });
 
@@ -64,8 +60,6 @@ export function AuthProvider({ children }) {
     } catch (err) {
       setError(err.message);
       throw err;
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -54,13 +54,13 @@ export default function Login({ onSwitchToRegister, onSuccess }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-bold text-teal-200 uppercase tracking-wider mb-1.5">
-            Email Address
+            Email or Username
           </label>
           <input
-            type="email"
+            type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="player@example.com"
+            placeholder="player@example.com or Username"
             disabled={isSubmitting}
             className="w-full px-4 py-3 rounded-2xl bg-teal-950/70 border border-teal-700/60 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-400/30 text-teal-100 placeholder-teal-600 text-sm transition-all disabled:opacity-50"
             required
