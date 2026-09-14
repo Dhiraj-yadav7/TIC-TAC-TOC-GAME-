@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext';
+import Logo from './Logo';
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const { user, isAuthenticated, logout } = useAuth();
@@ -11,17 +12,10 @@ export default function Navbar({ activeTab, setActiveTab }) {
           onClick={() => setActiveTab(isAuthenticated ? 'game' : 'login')}
           className="flex items-center gap-2.5 cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center font-black text-teal-950 text-lg shadow-md shadow-teal-500/20 group-hover:scale-105 transition-transform">
-            ✕◯
-          </div>
-          <div>
-            <span className="font-extrabold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-200 via-emerald-100 to-teal-300">
-              Tic Tac Toe
-            </span>
-            <span className="hidden sm:inline-block ml-2 text-[10px] uppercase font-bold tracking-widest text-teal-400/70 bg-teal-900/60 px-2 py-0.5 rounded-full border border-teal-700/40">
-              JWT MERN
-            </span>
-          </div>
+          <Logo size="sm" showText={true} />
+          <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest text-teal-400/70 bg-teal-900/60 px-2 py-0.5 rounded-full border border-teal-700/40">
+            JWT MERN
+          </span>
         </div>
 
         {/* Navigation Tabs (when authenticated) */}

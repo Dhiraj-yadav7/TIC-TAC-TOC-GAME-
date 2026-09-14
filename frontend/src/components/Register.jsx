@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import Logo from './Logo';
 
 export default function Register({ onSwitchToLogin, onSuccess }) {
   const { register } = useAuth();
@@ -47,7 +48,8 @@ export default function Register({ onSwitchToLogin, onSuccess }) {
 
   return (
     <div className="w-full max-w-md bg-teal-900/60 backdrop-blur-md rounded-3xl border border-teal-700/40 shadow-2xl p-6 sm:p-8 text-slate-100 transition-all">
-      <div className="text-center mb-6">
+      <div className="flex flex-col items-center text-center mb-6">
+        <Logo size="lg" className="mb-3" />
         <h2 className="text-2xl sm:text-3xl font-extrabold text-teal-200 tracking-tight">
           Create Account
         </h2>

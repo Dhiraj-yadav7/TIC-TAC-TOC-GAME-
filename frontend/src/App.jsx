@@ -8,6 +8,7 @@ import GameHistory from './components/GameHistory';
 import Profile from './components/Profile';
 import Leaderboard from './components/Leaderboard';
 import OnlineGame from './components/OnlineGame';
+import Logo from './components/Logo';
 import { getGameHistory } from './services/api';
 
 function AppContent() {
@@ -61,8 +62,9 @@ function AppContent() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-950 via-teal-900 to-emerald-950 text-slate-100 flex flex-col items-center justify-center p-4 select-none">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-4 border-teal-400 border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <Logo size="xl" animated={true} />
+          <div className="w-8 h-8 border-3 border-teal-400 border-t-transparent rounded-full animate-spin mt-2" />
           <span className="text-teal-200 text-sm font-semibold tracking-wider">
             Loading Tic Tac Toe...
           </span>

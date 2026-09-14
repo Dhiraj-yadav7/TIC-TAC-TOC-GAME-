@@ -3,6 +3,7 @@ import Board from "./Board";
 import Scoreboard from "./Scoreboard";
 import GameHistory from "./GameHistory";
 import PlayerSetup from "./PlayerSetup";
+import Logo from "./Logo";
 import { createGame, makeMove, resetGame, getGameStats, getGameHistory } from "../services/api";
 
 // All 8 winning line combinations on a 3x3 grid for UI highlight
@@ -198,13 +199,16 @@ export default function TicTacToe({ onSwitchToOnline }) {
       {/* Ambient glow backdrop */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header Title */}
-      <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-200 via-emerald-100 to-teal-300 mb-1.5 drop-shadow-md text-center">
-        Tic Tac Toe
-      </h1>
-      <p className="text-teal-200/70 text-xs sm:text-sm md:text-base mb-6 font-medium tracking-wider uppercase">
-        Full-Stack MERN Edition
-      </p>
+      {/* Header Title & Game Logo */}
+      <div className="flex flex-col items-center mb-6">
+        <Logo size="lg" className="mb-2" />
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-200 via-emerald-100 to-teal-300 mb-1 drop-shadow-md text-center">
+          Tic Tac Toe
+        </h1>
+        <p className="text-teal-200/70 text-xs sm:text-sm md:text-base font-medium tracking-wider uppercase">
+          Full-Stack MERN Edition
+        </p>
+      </div>
 
       {/* Error Alert Banner */}
       {error && (

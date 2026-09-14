@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import Board from './Board';
+import Logo from './Logo';
 
 const SOCKET_SERVER_URL =
   import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
@@ -195,9 +196,7 @@ export default function OnlineGame() {
       {/* Header & Real-time Connection Status */}
       <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 mb-5 pb-4 border-b border-teal-800/50">
         <div className="flex items-center gap-3 text-center sm:text-left">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-teal-500 flex items-center justify-center text-xl shadow-lg shadow-purple-950/40">
-            🌐
-          </div>
+          <Logo size="md" />
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-teal-200 tracking-tight">
               Online Multiplayer
