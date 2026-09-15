@@ -1,11 +1,25 @@
 const API_BASE_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'http://localhost:5000/api';
 
 /**
+ * Helper to execute fetch requests with clean network error messages
+ */
+async function safeFetch(url, options = {}) {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    if (err.name === 'TypeError' || err.message?.includes('fetch') || err.message?.includes('NetworkError')) {
+      throw new Error('Unable to connect to backend server. Please ensure the backend is running on http://localhost:5000');
+    }
+    throw err;
+  }
+}
+
+/**
  * Register a new user
  * POST /api/auth/register
  */
 export async function registerUser({ name, email, password }) {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+  const response = await safeFetch(`${API_BASE_URL}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, email, password })
@@ -24,7 +38,7 @@ export async function registerUser({ name, email, password }) {
  * POST /api/auth/login
  */
 export async function loginUser({ email, password }) {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await safeFetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
@@ -45,7 +59,7 @@ export async function loginUser({ email, password }) {
 export async function getMe(token) {
   if (!token) throw new Error('No authentication token provided');
 
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+  const response = await safeFetch(`${API_BASE_URL}/auth/me`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -68,7 +82,7 @@ export async function getMe(token) {
 export async function getUserStats(token) {
   if (!token) throw new Error('No authentication token provided');
 
-  const response = await fetch(`${API_BASE_URL}/users/me/stats`, {
+  const response = await safeFetch(`${API_BASE_URL}/users/me/stats`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -83,3 +97,4 @@ export async function getUserStats(token) {
 
   return data.data;
 }
+

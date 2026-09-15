@@ -1,6 +1,20 @@
 // API base URL configured from Vite environment variables with fallback
 const API_BASE_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'http://localhost:5000/api';
 
+/**
+ * Helper to execute fetch requests with clean network error messages
+ */
+async function safeFetch(url, options = {}) {
+  try {
+    return await fetch(url, options);
+  } catch (err) {
+    if (err.name === 'TypeError' || err.message?.includes('fetch') || err.message?.includes('NetworkError')) {
+      throw new Error('Unable to connect to backend server. Please ensure the backend is running on http://localhost:5000');
+    }
+    throw err;
+  }
+}
+
 // Helper function to build headers with Authorization Bearer token if present
 function getAuthHeaders() {
   const headers = { 'Content-Type': 'application/json' };
@@ -16,7 +30,7 @@ function getAuthHeaders() {
  * POST /api/games
  */
 export async function createGame(playerX = 'Player X', playerO = 'Player O') {
-  const response = await fetch(`${API_BASE_URL}/games`, {
+  const response = await safeFetch(`${API_BASE_URL}/games`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ playerX, playerO })
@@ -33,7 +47,7 @@ export async function createGame(playerX = 'Player X', playerO = 'Player O') {
  * GET /api/games/:id
  */
 export async function getGame(gameId) {
-  const response = await fetch(`${API_BASE_URL}/games/${gameId}`, {
+  const response = await safeFetch(`${API_BASE_URL}/games/${gameId}`, {
     headers: getAuthHeaders()
   });
   const data = await response.json();
@@ -48,7 +62,7 @@ export async function getGame(gameId) {
  * PUT /api/games/:id/move
  */
 export async function makeMove(gameId, index, player) {
-  const response = await fetch(`${API_BASE_URL}/games/${gameId}/move`, {
+  const response = await safeFetch(`${API_BASE_URL}/games/${gameId}/move`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify({ index, player })
@@ -65,7 +79,7 @@ export async function makeMove(gameId, index, player) {
  * POST /api/games/:id/reset
  */
 export async function resetGame(gameId) {
-  const response = await fetch(`${API_BASE_URL}/games/${gameId}/reset`, {
+  const response = await safeFetch(`${API_BASE_URL}/games/${gameId}/reset`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({})
@@ -82,7 +96,7 @@ export async function resetGame(gameId) {
  * GET /api/games/history?page=1&limit=5
  */
 export async function getGameHistory(page = 1, limit = 5) {
-  const response = await fetch(`${API_BASE_URL}/games/history?page=${page}&limit=${limit}`, {
+  const response = await safeFetch(`${API_BASE_URL}/games/history?page=${page}&limit=${limit}`, {
     headers: getAuthHeaders()
   });
   const data = await response.json();
@@ -97,7 +111,7 @@ export async function getGameHistory(page = 1, limit = 5) {
  * GET /api/games/stats
  */
 export async function getGameStats() {
-  const response = await fetch(`${API_BASE_URL}/games/stats`, {
+  const response = await safeFetch(`${API_BASE_URL}/games/stats`, {
     headers: getAuthHeaders()
   });
   const data = await response.json();
@@ -112,10 +126,11 @@ export async function getGameStats() {
  * GET /api/leaderboard
  */
 export async function getLeaderboard() {
-  const response = await fetch(`${API_BASE_URL}/leaderboard`);
+  const response = await safeFetch(`${API_BASE_URL}/leaderboard`);
   const data = await response.json();
   if (!response.ok || !data.success) {
     throw new Error(data.message || 'Failed to fetch global leaderboard');
   }
   return data.data;
 }
+
