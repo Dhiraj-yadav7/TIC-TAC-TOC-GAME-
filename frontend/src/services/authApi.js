@@ -8,7 +8,7 @@ async function safeFetch(url, options = {}) {
     return await fetch(url, options);
   } catch (err) {
     if (err.name === 'TypeError' || err.message?.includes('fetch') || err.message?.includes('NetworkError')) {
-      throw new Error('Unable to connect to backend server. Please ensure the backend is running on http://localhost:5000');
+      throw new Error('Unable to connect to backend server. Please verify your connection or backend server status.');
     }
     throw err;
   }

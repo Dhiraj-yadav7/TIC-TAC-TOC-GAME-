@@ -19,6 +19,7 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import leaderboardRoutes from './routes/leaderboardRoutes.js';
 import initGameSocket from './sockets/gameSocket.js';
+import { connectDB } from './config/db.js';
 
 // Load environment variables
 dotenv.config();
@@ -74,11 +75,22 @@ app.use(cors(corsOptions));
 // Express JSON Body Parser
 app.use(express.json());
 
+// Serverless Database Connection Middleware
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection error in middleware:', err.message);
+    next();
+  }
+});
+
 // Welcome root endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Tic Tac Toe Backend API is running with Socket.IO!',
+    message: 'Tic Tac Toe Backend API is running!',
     frontendUrl: CLIENT_ORIGIN !== '*' ? CLIENT_ORIGIN : 'http://localhost:5173',
     healthCheck: '/api/health',
     endpoints: [
@@ -113,22 +125,31 @@ app.get('/api/health', (req, res) => {
 });
 
 // Database Health check endpoint
-app.get('/api/health/db', (req, res) => {
-  const isConnected = mongoose.connection.readyState === 1;
-  const dbName = mongoose.connection.name || 'tictactoe';
+app.get('/api/health/db', async (req, res) => {
+  try {
+    await connectDB();
+    const isConnected = mongoose.connection.readyState === 1;
+    const dbName = mongoose.connection.name || 'tictactoe';
 
-  if (isConnected) {
-    return res.status(200).json({
-      success: true,
-      message: 'MongoDB connection is working',
-      database: dbName
+    if (isConnected) {
+      return res.status(200).json({
+        success: true,
+        message: 'MongoDB connection is working',
+        database: dbName
+      });
+    }
+
+    return res.status(503).json({
+      success: false,
+      message: 'MongoDB connection is not available'
+    });
+  } catch (err) {
+    return res.status(503).json({
+      success: false,
+      message: 'MongoDB connection error',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
-
-  return res.status(503).json({
-    success: false,
-    message: 'MongoDB connection is not available'
-  });
 });
 
 // Global 404 Handler for undefined routes
@@ -149,24 +170,13 @@ app.use((err, req, res, _next) => {
   });
 });
 
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000
-    });
-    console.log('MongoDB connected successfully');
-  } catch (err) {
-    console.error('MongoDB connection failed:', err.message);
-  }
-};
-
-connectDB();
-
-// Start HTTP server with Socket.IO attached
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start standalone HTTP server only when not running as Vercel serverless function
+if (!process.env.VERCEL) {
+  connectDB().catch((err) => console.error('Initial DB connection error:', err.message));
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 // Graceful shutdown handler
 const gracefulShutdown = async () => {
@@ -185,4 +195,6 @@ const gracefulShutdown = async () => {
 
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
+
+export default app;
 

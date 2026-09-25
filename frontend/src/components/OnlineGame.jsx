@@ -46,6 +46,11 @@ export default function OnlineGame() {
       setConnectionStatus('reconnecting');
     });
 
+    socket.on('connect_error', () => {
+      setConnectionStatus('disconnected');
+      setError('Real-time online rooms require a persistent WebSocket server. Note: All REST features (Leaderboard, User Stats, History, Auth) are fully functional on Vercel!');
+    });
+
     socket.on('error', ({ message }) => {
       setError(message || 'An online game error occurred.');
     });
